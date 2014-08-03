@@ -9,32 +9,36 @@
  *
  * @copyright     Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
  * @link          http://cakephp.org CakePHP(tm) Project
- * @since         0.10.0
+ * @since         3.0.0
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
-use Cake\Utility\Debugger;
+use Cake\Utility\Inflector;
 ?>
-<h2>Database Error</h2>
+<h2>Missing Cell View</h2>
 <p class="error">
 	<strong>Error: </strong>
-	<?= $message; ?>
+	<?= sprintf('The view for <em>%sCell</em> was not found.', h(Inflector::camelize($name))) ?>
 </p>
-<p class="notice">
-	If you are using SQL keywords as table column names, you can enable identifier
-	quoting for your database connection in config/app.php.
+
+<p>
+	<?= sprintf('Confirm you have created the file: "%s"', h($file . $this->_ext)) ?>
+	in one of the following paths:
 </p>
-<?php if (!empty($error->queryString)) : ?>
-	<p class="notice">
-		<strong>SQL Query: </strong>
-		<?= h($error->queryString); ?>
-	</p>
-<?php endif; ?>
-<?php if (!empty($error->params)) : ?>
-		<strong>SQL Query Params: </strong>
-		<?= Debugger::dump($error->params); ?>
-<?php endif; ?>
+<ul>
+<?php
+	$paths = $this->_paths($this->plugin);
+	foreach ($paths as $path):
+		if (strpos($path, CORE_PATH) !== false) {
+			continue;
+		}
+		echo sprintf('<li>%sCell/%s/%s</li>', h($path), h($name), h($file . $this->_ext));
+	endforeach;
+?>
+</ul>
+
 <p class="notice">
 	<strong>Notice: </strong>
-	<?= sprintf('If you want to customize this error message, create %s', APP_DIR . DS . 'Template' . DS . 'Error' . DS . 'pdo_error.ctp'); ?>
+	<?= sprintf('If you want to customize this error message, create %s', APP_DIR . DS . 'Template' . DS . 'Error' . DS . 'missing_view.ctp'); ?>
 </p>
+
 <?= $this->element('exception_stack_trace'); ?>
