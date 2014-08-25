@@ -15,7 +15,7 @@
 
 echo "<?php\n";
 ?>
-namespace <?= $namespace ?>\Console\Command;
+namespace <?= $namespace ?>\Shell;
 
 use Cake\Console\Shell;
 
@@ -31,4 +31,5 @@ class <?= $name ?>Shell extends Shell {
  */
 	public function main() {
 	}
+
 }

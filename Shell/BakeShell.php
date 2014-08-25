@@ -12,7 +12,7 @@
  * @since         1.2.0
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Console\Command;
+namespace Cake\Shell;
 
 use Cake\Cache\Cache;
 use Cake\Console\Shell;
@@ -92,11 +92,11 @@ class BakeShell extends Shell {
  * Locate the tasks bake will use.
  *
  * Scans the following paths for tasks that are subclasses of
- * Cake\Console\Command\Task\BakeTask:
+ * Cake\Shell\Task\BakeTask:
  *
- * - Cake/Console/Command/Task/
- * - App/Console/Command/Task/
- * - Console/Command/Task for each loaded plugin
+ * - Cake/Shell/Task/
+ * - App/Shell/Task/
+ * - Shell/Task for each loaded plugin
  *
  * @return void
  */
@@ -126,7 +126,7 @@ class BakeShell extends Shell {
  * @return array Updated tasks.
  */
 	protected function _findTasks($tasks, $path, $namespace, $prefix = false) {
-		$path .= 'Console/Command/Task';
+		$path .= 'Shell/Task';
 		if (!is_dir($path)) {
 			return $tasks;
 		}
@@ -156,7 +156,7 @@ class BakeShell extends Shell {
 				continue;
 			}
 			$name = $item->getBasename('.php');
-			$candidates[] = $namespace . '\Console\Command\Task\\' . $name;
+			$candidates[] = $namespace . '\Shell\Task\\' . $name;
 		}
 		return $candidates;
 	}
@@ -177,7 +177,7 @@ class BakeShell extends Shell {
 			if (!$reflect->isInstantiable()) {
 				continue;
 			}
-			if (!$reflect->isSubclassOf('Cake\Console\Command\Task\BakeTask')) {
+			if (!$reflect->isSubclassOf('Cake\Shell\Task\BakeTask')) {
 				continue;
 			}
 			$classes[] = $className;

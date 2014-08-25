@@ -12,7 +12,7 @@
  * @since         1.3.0
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Console\Command\Task;
+namespace Cake\Shell\Task;
 
 use Cake\Cache\Cache;
 use Cake\Console\Shell;

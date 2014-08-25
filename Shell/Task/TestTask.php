@@ -12,7 +12,7 @@
  * @since         1.3.0
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Console\Command\Task;
+namespace Cake\Shell\Task;
 
 use Cake\Console\Shell;
 use Cake\Controller\Controller;
@@ -52,7 +52,7 @@ class TestTask extends BakeTask {
 		'Component' => 'Controller\Component',
 		'Behavior' => 'Model\Behavior',
 		'Helper' => 'View\Helper',
-		'Shell' => 'Console\Command',
+		'Shell' => 'Shell',
 		'Cell' => 'View\Cell',
 	];
 

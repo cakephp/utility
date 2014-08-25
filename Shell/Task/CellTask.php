@@ -12,9 +12,9 @@
  * @since         3.0.0
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Console\Command\Task;
+namespace Cake\Shell\Task;
 
-use Cake\Console\Command\Task\SimpleBakeTask;
+use Cake\Shell\Task\SimpleBakeTask;
 
 /**
  * Task for creating cells.

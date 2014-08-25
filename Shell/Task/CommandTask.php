@@ -12,7 +12,7 @@
  * @since         2.5.0
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Console\Command\Task;
+namespace Cake\Shell\Task;
 
 use Cake\Console\ConsoleOptionParser;
 use Cake\Console\Shell;
@@ -41,18 +41,18 @@ class CommandTask extends Shell {
 		$plugins = Plugin::loaded();
 		$shellList = array_fill_keys($plugins, null) + ['CORE' => null, 'app' => null];
 
-		$corePath = App::core('Console/Command');
+		$corePath = App::core('Shell');
 		$shells = $this->_scanDir($corePath[0]);
 		$shells = array_diff($shells, $skipFiles, $hiddenCommands);
 		$shellList = $this->_appendShells('CORE', $shells, $shellList);
 
-		$appPath = App::path('Console/Command');
+		$appPath = App::path('Shell');
 		$appShells = $this->_scanDir($appPath[0]);
 		$appShells = array_diff($appShells, $shells, $skipFiles);
 		$shellList = $this->_appendShells('app', $appShells, $shellList);
 
 		foreach ($plugins as $plugin) {
-			$pluginPath = Plugin::classPath($plugin) . 'Console' . DS . 'Command';
+			$pluginPath = Plugin::classPath($plugin) . 'Shell';
 			$pluginShells = $this->_scanDir($pluginPath);
 			$shellList = $this->_appendShells($plugin, $pluginShells, $shellList);
 		}
@@ -178,7 +178,7 @@ class CommandTask extends Shell {
 
 		$name = Inflector::camelize($name);
 		$pluginDot = Inflector::camelize($pluginDot);
-		$class = App::className($pluginDot . $name, 'Console/Command', 'Shell');
+		$class = App::className($pluginDot . $name, 'Shell', 'Shell');
 		if (!$class) {
 			return false;
 		}

@@ -12,9 +12,9 @@
  * @since         1.2.0
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Console\Command\Task;
+namespace Cake\Shell\Task;
 
-use Cake\Console\Command\Task\BakeTask;
+use Cake\Shell\Task\BakeTask;
 use Cake\Console\Shell;
 use Cake\Core\App;
 use Cake\Utility\File;
@@ -101,7 +101,7 @@ class PluginTask extends BakeTask {
 				$classBase . DS . 'Model' . DS . 'Behavior',
 				$classBase . DS . 'Model' . DS . 'Table',
 				$classBase . DS . 'Model' . DS . 'Entity',
-				$classBase . DS . 'Console' . DS . 'Command' . DS . 'Task',
+				$classBase . DS . 'Shell' . DS . 'Task',
 				$classBase . DS . 'Controller' . DS . 'Component',
 				$classBase . DS . 'View' . DS . 'Helper',
 				$classBase . DS . 'Template',

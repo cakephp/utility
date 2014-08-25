@@ -12,41 +12,41 @@
  * @since         3.0.0
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Console\Command\Task;
+namespace Cake\Shell\Task;
 
-use Cake\Console\Command\Task\SimpleBakeTask;
+use Cake\Shell\Task\SimpleBakeTask;
 
 /**
- * Component code generator.
+ * Shell code generator.
  */
-class ComponentTask extends SimpleBakeTask {
+class ShellTask extends SimpleBakeTask {
 
 /**
  * Task name used in path generation.
  *
  * @var string
  */
-	public $pathFragment = 'Controller/Component/';
+	public $pathFragment = 'Shell/';
 
 /**
  * {@inheritDoc}
  */
 	public function name() {
-		return 'component';
+		return 'shell';
 	}
 
 /**
  * {@inheritDoc}
  */
 	public function fileName($name) {
-		return $name . 'Component.php';
+		return $name . 'Shell.php';
 	}
 
 /**
  * {@inheritDoc}
  */
 	public function template() {
-		return 'component';
+		return 'shell';
 	}
 
 }

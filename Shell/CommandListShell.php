@@ -12,7 +12,7 @@
  * @since         2.0.0
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Console\Command;
+namespace Cake\Shell;
 
 use Cake\Console\ConsoleOutput;
 use Cake\Console\Shell;
