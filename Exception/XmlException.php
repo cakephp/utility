@@ -11,14 +11,14 @@
  * @since         3.0.0
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Utility\Error;
+namespace Cake\Utility\Exception;
 
-use Cake\Core\Exception\Exception;
+use RuntimeException;
 
 /**
  * Exception class for Xml.  This exception will be thrown from Xml when it
  * encounters an error.
  *
  */
-class XmlException extends Exception {
+class XmlException extends RuntimeException {
 }
