@@ -1,4 +1,4 @@
-<?php
+<%
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -12,22 +12,18 @@
  * @since         3.0.0
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
-echo "<?php\n"; ?>
-namespace <?= $namespace ?>\Controller\Component;
-
-use Cake\Controller\Component;
-use Cake\Controller\ComponentRegistry;
-
+%>
 /**
- * <?= $name ?> component
- */
-class <?= $name ?>Component extends Component {
-
-/**
- * Default configuration.
+ * Index method
  *
- * @var array
+ * @return void
  */
-	protected $_defaultConfig = [];
-
-}
+	public function index() {
+<% $belongsTo = $this->Bake->aliasExtractor($modelObj, 'BelongsTo'); %>
+<% if ($belongsTo): %>
+		$this->paginate = [
+			'contain' => [<%= $this->Bake->stringifyList($belongsTo, ['indent' => false]) %>]
+		];
+<% endif; %>
+		$this->set('<%= $pluralName %>', $this->paginate($this-><%= $currentModelName %>));
+	}
