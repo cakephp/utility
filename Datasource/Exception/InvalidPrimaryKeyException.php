@@ -1,4 +1,4 @@
-<%
+<?php
 /**
  * CakePHP(tm) : Rapid Development Framework (http://cakephp.org)
  * Copyright (c) Cake Software Foundation, Inc. (http://cakefoundation.org)
@@ -12,23 +12,25 @@
  * @since         3.0.0
  * @license       http://www.opensource.org/licenses/mit-license.php MIT License
  */
-%>
-<?php
-namespace <%= $namespace %>\Model\Behavior;
+namespace Cake\Datasource\Exception;
 
-use Cake\ORM\Behavior;
-use Cake\ORM\Table;
+use RuntimeException;
 
 /**
- * <%= $name %> behavior
- */
-class <%= $name %>Behavior extends Behavior {
-
-/**
- * Default configuration.
+ * Exception raised when a particular record was not found
  *
- * @var array
  */
-	protected $_defaultConfig = [];
+class InvalidPrimaryKeyException extends RuntimeException {
+
+/**
+ * Constructor.
+ *
+ * @param string $message The error message
+ * @param int $code The code of the error, is also the HTTP status code for the error.
+ * @param \Exception|null $previous the previous exception.
+ */
+	public function __construct($message, $code = 404, $previous = null) {
+		parent::__construct($message, $code, $previous);
+	}
 
 }
