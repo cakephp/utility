@@ -9,26 +9,25 @@
  *
  * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  * @link          https://cakephp.org CakePHP(tm) Project
- * @since         2.0.0
+ * @since         3.5.4
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Cache\Engine;
 
+use APCUIterator;
 use Cake\Cache\CacheEngine;
 
 /**
- * Wincache storage engine for cache
- *
- * Supports wincache 1.1.0 and higher.
+ * APCu storage engine for cache
  */
-class WincacheEngine extends CacheEngine
+class ApcuEngine extends CacheEngine
 {
 
     /**
      * Contains the compiled group names
      * (prefixed with the global configuration prefix)
      *
-     * @var array
+     * @var string[]
      */
     protected $_compiledGroupNames = [];
 
@@ -42,13 +41,11 @@ class WincacheEngine extends CacheEngine
      */
     public function init(array $config = [])
     {
-        if (!extension_loaded('wincache')) {
+        if (!extension_loaded('apcu')) {
             return false;
         }
 
-        parent::init($config);
-
-        return true;
+        return parent::init($config);
     }
 
     /**
@@ -57,13 +54,14 @@ class WincacheEngine extends CacheEngine
      * @param string $key Identifier for the data
      * @param mixed $value Data to be cached
      * @return bool True if the data was successfully cached, false on failure
+     * @link https://secure.php.net/manual/en/function.apcu-store.php
      */
     public function write($key, $value)
     {
         $key = $this->_key($key);
         $duration = $this->_config['duration'];
 
-        return wincache_ucache_set($key, $value, $duration);
+        return apcu_store($key, $value, $duration);
     }
 
     /**
@@ -72,12 +70,13 @@ class WincacheEngine extends CacheEngine
      * @param string $key Identifier for the data
      * @return mixed The cached data, or false if the data doesn't exist,
      *   has expired, or if there was an error fetching it
+     * @link https://secure.php.net/manual/en/function.apcu-fetch.php
      */
     public function read($key)
     {
         $key = $this->_key($key);
 
-        return wincache_ucache_get($key);
+        return apcu_fetch($key);
     }
 
     /**
@@ -86,12 +85,13 @@ class WincacheEngine extends CacheEngine
      * @param string $key Identifier for the data
      * @param int $offset How much to increment
      * @return bool|int New incremented value, false otherwise
+     * @link https://secure.php.net/manual/en/function.apcu-inc.php
      */
     public function increment($key, $offset = 1)
     {
         $key = $this->_key($key);
 
-        return wincache_ucache_inc($key, $offset);
+        return apcu_inc($key, $offset);
     }
 
     /**
@@ -100,12 +100,13 @@ class WincacheEngine extends CacheEngine
      * @param string $key Identifier for the data
      * @param int $offset How much to subtract
      * @return bool|int New decremented value, false otherwise
+     * @link https://secure.php.net/manual/en/function.apcu-dec.php
      */
     public function decrement($key, $offset = 1)
     {
         $key = $this->_key($key);
 
-        return wincache_ucache_dec($key, $offset);
+        return apcu_dec($key, $offset);
     }
 
     /**
@@ -113,37 +114,64 @@ class WincacheEngine extends CacheEngine
      *
      * @param string $key Identifier for the data
      * @return bool True if the value was successfully deleted, false if it didn't exist or couldn't be removed
+     * @link https://secure.php.net/manual/en/function.apcu-delete.php
      */
     public function delete($key)
     {
         $key = $this->_key($key);
 
-        return wincache_ucache_delete($key);
+        return apcu_delete($key);
     }
 
     /**
-     * Delete all keys from the cache. This will clear every
-     * item in the cache matching the cache config prefix.
+     * Delete all keys from the cache. This will clear every cache config using APC.
      *
-     * @param bool $check If true, nothing will be cleared, as entries will
-     *   naturally expire in wincache..
+     * @param bool $check If true, nothing will be cleared, as entries are removed
+     *    from APC as they expired. This flag is really only used by FileEngine.
      * @return bool True Returns true.
+     * @link https://secure.php.net/manual/en/function.apcu-cache-info.php
+     * @link https://secure.php.net/manual/en/function.apcu-delete.php
      */
     public function clear($check)
     {
         if ($check) {
             return true;
         }
-        $info = wincache_ucache_info();
-        $cacheKeys = $info['ucache_entries'];
-        unset($info);
-        foreach ($cacheKeys as $key) {
-            if (strpos($key['key_name'], $this->_config['prefix']) === 0) {
-                wincache_ucache_delete($key['key_name']);
+        if (class_exists('APCUIterator', false)) {
+            $iterator = new APCUIterator(
+                '/^' . preg_quote($this->_config['prefix'], '/') . '/',
+                APC_ITER_NONE
+            );
+            apcu_delete($iterator);
+
+            return true;
+        }
+
+        $cache = apcu_cache_info(); // Raises warning by itself already
+        foreach ($cache['cache_list'] as $key) {
+            if (strpos($key['info'], $this->_config['prefix']) === 0) {
+                apcu_delete($key['info']);
             }
         }
 
         return true;
+    }
+
+    /**
+     * Write data for key into cache if it doesn't exist already.
+     * If it already exists, it fails and returns false.
+     *
+     * @param string $key Identifier for the data.
+     * @param mixed $value Data to be cached.
+     * @return bool True if the data was successfully cached, false on failure.
+     * @link https://secure.php.net/manual/en/function.apcu-add.php
+     */
+    public function add($key, $value)
+    {
+        $key = $this->_key($key);
+        $duration = $this->_config['duration'];
+
+        return apcu_add($key, $value, $duration);
     }
 
     /**
@@ -152,6 +180,8 @@ class WincacheEngine extends CacheEngine
      * the group accordingly.
      *
      * @return array
+     * @link https://secure.php.net/manual/en/function.apcu-fetch.php
+     * @link https://secure.php.net/manual/en/function.apcu-store.php
      */
     public function groups()
     {
@@ -161,12 +191,18 @@ class WincacheEngine extends CacheEngine
             }
         }
 
-        $groups = wincache_ucache_get($this->_compiledGroupNames);
-        if (count($groups) !== count($this->_config['groups'])) {
+        $success = false;
+        $groups = apcu_fetch($this->_compiledGroupNames, $success);
+        if ($success && count($groups) !== count($this->_config['groups'])) {
             foreach ($this->_compiledGroupNames as $group) {
                 if (!isset($groups[$group])) {
-                    wincache_ucache_set($group, 1);
-                    $groups[$group] = 1;
+                    $value = 1;
+                    if (apcu_store($group, $value) === false) {
+                        $this->warning(
+                            sprintf('Failed to store key "%s" with value "%s" into APCu cache.', $group, $value)
+                        );
+                    }
+                    $groups[$group] = $value;
                 }
             }
             ksort($groups);
@@ -187,11 +223,12 @@ class WincacheEngine extends CacheEngine
      *
      * @param string $group The group to clear.
      * @return bool success
+     * @link https://secure.php.net/manual/en/function.apcu-inc.php
      */
     public function clearGroup($group)
     {
         $success = false;
-        wincache_ucache_inc($this->_config['prefix'] . $group, 1, $success);
+        apcu_inc($this->_config['prefix'] . $group, 1, $success);
 
         return $success;
     }
