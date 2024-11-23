@@ -159,7 +159,7 @@ class Xml
                 }
 
                 return $xml;
-            }
+            },
         );
     }
 
@@ -191,7 +191,7 @@ class Xml
                 }
 
                 return $xml;
-            }
+            },
         );
     }
 
@@ -473,9 +473,7 @@ class Xml
         $data = [];
 
         foreach ($namespaces as $namespace) {
-            /** @var \SimpleXMLElement $attributes */
             $attributes = $xml->attributes($namespace, true);
-            /** @var string $key */
             foreach ($attributes as $key => $value) {
                 if ($namespace) {
                     $key = $namespace . ':' . $key;
