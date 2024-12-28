@@ -26,11 +26,7 @@
     },
     "require": {
         "php": ">=8.4",
-        "cakephp/core": "6.x-dev"
-    },
-    "suggest": {
-        "ext-intl": "To use Text::transliterate() or Text::slug()",
-        "lib-ICU": "To use Text::transliterate() or Text::slug()"
+        "cakephp/core": "^6.0"
     },
     "autoload": {
         "psr-4": {
@@ -39,6 +35,10 @@
         "files": [
             "bootstrap.php"
         ]
+    },
+    "suggest": {
+        "ext-intl": "To use Text::transliterate() or Text::slug()",
+        "lib-ICU": "To use Text::transliterate() or Text::slug()"
     },
     "minimum-stability": "dev",
     "prefer-stable": true
