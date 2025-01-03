@@ -172,16 +172,16 @@ class Text
      * corresponds to a variable placeholder name in $str.
      * Example:
      * ```
-     * Text::insert(':name is :age years old.', ['name' => 'Bob', 'age' => '65']);
+     * Text::insert('{name} is {age} years old.', ['name' => 'Bob', 'age' => '65']);
      * ```
      * Returns: Bob is 65 years old.
      *
      * Available $options are:
      *
-     * - before: The character or string in front of the name of the variable placeholder (Defaults to `:`)
-     * - after: The character or string after the name of the variable placeholder (Defaults to null)
+     * - before: The character or string in front of the name of the variable placeholder (Defaults to `{`)
+     * - after: The character or string after the name of the variable placeholder (Defaults to `}`)
      * - escape: The character or string used to escape the before character / string (Defaults to `\`)
-     * - format: A regex to use for matching variable placeholders. Default is: `/(?<!\\)\:%s/`
+     * - format: A regex to use for matching variable placeholders. Default is: `/(?<!\\){%s}/`
      *   (Overwrites before, after, breaks escape / clean)
      * - clean: A boolean or array with instructions for Text::cleanInsert
      *
@@ -193,10 +193,7 @@ class Text
      */
     public static function insert(string $str, array $data, array $options = []): string
     {
-        $defaults = [
-            'before' => ':', 'after' => '', 'escape' => '\\', 'format' => null, 'clean' => false,
-        ];
-        $options += $defaults;
+        $options += ['before' => '{', 'after' => '}', 'escape' => '\\', 'format' => null, 'clean' => false];
         if (!$data) {
             return $options['clean'] ? static::cleanInsert($str, $options) : $str;
         }
@@ -238,7 +235,7 @@ class Text
 
     /**
      * Cleans up a Text::insert() formatted string with given $options depending on the 'clean' key in
-     * $options. The default method used is text but html is also available. The goal of this function
+     * $options. The default method used is "text" but "html" is also available. The goal of this function
      * is to replace all whitespace and unneeded markup around placeholders that did not get replaced
      * by Text::insert().
      *
@@ -281,7 +278,7 @@ class Text
             case 'text':
                 $clean += [
                     'word' => '[\w,.]+',
-                    'gap' => '[\s]*(?:(?:and|or)[\s]*)?',
+                    'gap' => '[\s]*(?:(?:and|or|,|\.)[\s]*)?',
                     'replacement' => '',
                 ];
 

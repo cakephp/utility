@@ -44,7 +44,7 @@ The Text class includes convenience methods for creating and manipulating string
 
 ```php
 Text::insert(
-    'My name is :name and I am :age years old.',
+    'My name is {name} and I am {age} years old.',
     ['name' => 'Bob', 'age' => '65']
 );
 // Returns: "My name is Bob and I am 65 years old."
