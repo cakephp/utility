@@ -226,7 +226,7 @@ class Text
             $str = (string)str_replace($tmpHash, $tmpValue, $str);
         }
 
-        if (!isset($options['format']) && isset($options['before'])) {
+        if ($options['format'] === null && $options['before'] !== null) {
             $str = (string)str_replace($options['escape'] . $options['before'], $options['before'], $str);
         }
 
@@ -316,7 +316,7 @@ class Text
      */
     public static function wrap(string $text, array|int $options = []): string
     {
-        if (is_numeric($options)) {
+        if (is_int($options)) {
             $options = ['width' => $options];
         }
         $options += ['width' => 72, 'wordWrap' => true, 'indent' => null, 'indentAt' => 0];
@@ -329,7 +329,7 @@ class Text
             }
             $wrapped = trim(chunk_split($text, $length, "\n"));
         }
-        if (!empty($options['indent'])) {
+        if ($options['indent']) {
             $chunks = explode("\n", $wrapped);
             for ($i = $options['indentAt'], $len = count($chunks); $i < $len; $i++) {
                 $chunks[$i] = $options['indent'] . $chunks[$i];
@@ -357,14 +357,14 @@ class Text
      */
     public static function wrapBlock(string $text, array|int $options = []): string
     {
-        if (is_numeric($options)) {
+        if (is_int($options)) {
             $options = ['width' => $options];
         }
         $options += ['width' => 72, 'wordWrap' => true, 'indent' => null, 'indentAt' => 0];
 
         $wrapped = self::wrap($text, $options);
 
-        if (!empty($options['indent'])) {
+        if ($options['indent']) {
             $indentationLength = mb_strlen($options['indent']);
             $chunks = explode("\n", $wrapped);
             $count = count($chunks);
@@ -481,13 +481,12 @@ class Text
             return $text;
         }
 
-        $defaults = [
+        $options += [
             'format' => '<span class="highlight">\1</span>',
             'html' => false,
             'regex' => '|%s|iu',
             'limit' => -1,
         ];
-        $options += $defaults;
 
         if (is_array($phrase)) {
             $replace = [];
@@ -537,10 +536,7 @@ class Text
      */
     public static function tail(string $text, int $length = 100, array $options = []): string
     {
-        $default = [
-            'ellipsis' => '…', 'exact' => true,
-        ];
-        $options += $default;
+        $options += ['ellipsis' => '…', 'exact' => true];
         $ellipsis = $options['ellipsis'];
 
         if (mb_strlen($text) <= $length) {
@@ -853,7 +849,7 @@ class Text
      */
     public static function excerpt(string $text, string $phrase, int $radius = 100, string $ellipsis = '…'): string
     {
-        if (!$text || !$phrase) {
+        if ($text === '' || $phrase === '') {
             return static::truncate($text, $radius * 2, ['ellipsis' => $ellipsis]);
         }
         $append = $ellipsis;
