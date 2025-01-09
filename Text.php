@@ -891,7 +891,9 @@ class Text
      */
     public static function toList(array $list, ?string $and = null, string $separator = ', '): string
     {
-        $and ??= __d('cake', 'and');
+        $defaultAnd = function_exists('__d') ? __d('cake', 'and') : 'and';
+        $and ??= $defaultAnd;
+
         if (count($list) > 1) {
             return implode($separator, array_slice($list, 0, -1)) . ' ' . $and . ' ' . array_pop($list);
         }
