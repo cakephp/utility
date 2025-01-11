@@ -55,7 +55,7 @@ class Text
      *
      * @var bool
      */
-    protected static bool $_useI18n;
+    protected static bool $useI18n;
 
     /**
      * Generate a random UUID version 4
@@ -898,8 +898,8 @@ class Text
      */
     public static function toList(array $list, ?string $and = null, string $separator = ', '): string
     {
-        static::$_useI18n ??= function_exists('__d');
-        $and ??= static::$_useI18n ? __d('cake', 'and') : 'and';
+        static::$useI18n ??= function_exists('__d');
+        $and ??= static::$useI18n ? __d('cake', 'and') : 'and';
 
         if (count($list) > 1) {
             return implode($separator, array_slice($list, 0, -1)) . ' ' . $and . ' ' . array_pop($list);
