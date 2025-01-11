@@ -898,7 +898,7 @@ class Text
      */
     public static function toList(array $list, ?string $and = null, string $separator = ', '): string
     {
-        static::$useI18n ??= function_exists('__d');
+        static::$useI18n ??= function_exists('Cake\I18n\__d');
         $and ??= static::$useI18n ? __d('cake', 'and') : 'and';
 
         if (count($list) > 1) {
