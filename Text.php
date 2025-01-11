@@ -898,8 +898,8 @@ class Text
      */
     public static function toList(array $list, ?string $and = null, string $separator = ', '): string
     {
-        static::$_useI18n ??= function_exists('__d') === true;
-        $and ??= (static::$_useI18n === true ? __d('cake', 'and') : 'and');
+        static::$_useI18n ??= function_exists('__d');
+        $and ??= static::$_useI18n ? __d('cake', 'and') : 'and';
 
         if (count($list) > 1) {
             return implode($separator, array_slice($list, 0, -1)) . ' ' . $and . ' ' . array_pop($list);
