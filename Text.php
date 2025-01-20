@@ -51,6 +51,13 @@ class Text
     ];
 
     /**
+     * Whether to use I18n functions for translating default error messages
+     *
+     * @var bool
+     */
+    protected static bool $useI18n;
+
+    /**
      * Generate a random UUID version 4
      *
      * Warning: This method should not be used as a random seed for any cryptographic operations.
@@ -891,7 +898,9 @@ class Text
      */
     public static function toList(array $list, ?string $and = null, string $separator = ', '): string
     {
-        $and ??= __d('cake', 'and');
+        static::$useI18n ??= function_exists('Cake\I18n\__d');
+        $and ??= static::$useI18n ? __d('cake', 'and') : 'and';
+
         if (count($list) > 1) {
             return implode($separator, array_slice($list, 0, -1)) . ' ' . $and . ' ' . array_pop($list);
         }
