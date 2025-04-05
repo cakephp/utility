@@ -1203,7 +1203,7 @@ class Hash
      *
      * ### Options:
      *
-     * - `children` The key name to use in the resultset for children.
+     * - `children` The key name to use in the result set for children.
      * - `idPath` The path to a key that identifies each entry. Should be
      *   compatible with Hash::extract(). Defaults to `{n}.$alias.id`
      * - `parentPath` The path to a key that identifies the parent of each entry.
