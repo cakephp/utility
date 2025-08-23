@@ -32,7 +32,7 @@ trait CookieCryptTrait
      *
      * @var array<string>
      */
-    protected array $_validCiphers = ['aes'];
+    protected array $validCiphers = ['aes'];
 
     /**
      * Returns the encryption key to be used.C
@@ -78,10 +78,10 @@ trait CookieCryptTrait
      */
     protected function checkCipher(string $encrypt): void
     {
-        if (!in_array($encrypt, $this->_validCiphers, true)) {
+        if (!in_array($encrypt, $this->validCiphers, true)) {
             $msg = sprintf(
                 'Invalid encryption cipher. Must be one of %s or false.',
-                implode(', ', $this->_validCiphers),
+                implode(', ', $this->validCiphers),
             );
             throw new InvalidArgumentException($msg);
         }

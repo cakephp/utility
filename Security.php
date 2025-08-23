@@ -38,14 +38,14 @@ class Security
      *
      * @var string|null
      */
-    protected static ?string $_salt = null;
+    protected static ?string $salt = null;
 
     /**
      * The crypto implementation to use.
      *
      * @var object|null
      */
-    protected static ?object $_instance = null;
+    protected static ?object $instance = null;
 
     /**
      * Create a hash from string using given method.
@@ -166,14 +166,14 @@ class Security
     public static function engine(?object $instance = null): object
     {
         if ($instance) {
-            return static::$_instance = $instance;
+            return static::$instance = $instance;
         }
-        if (isset(static::$_instance)) {
+        if (isset(static::$instance)) {
             /** @var \Cake\Utility\Crypto\OpenSsl */
-            return static::$_instance;
+            return static::$instance;
         }
         if (extension_loaded('openssl')) {
-            return static::$_instance = new OpenSsl();
+            return static::$instance = new OpenSsl();
         }
         throw new InvalidArgumentException(
             'No compatible crypto engine available. ' .
@@ -284,13 +284,13 @@ class Security
      */
     public static function getSalt(): string
     {
-        if (static::$_salt === null) {
+        if (static::$salt === null) {
             throw new CakeException(
                 'Salt not set. Use Security::setSalt() to set one, ideally in `config/bootstrap.php`.',
             );
         }
 
-        return static::$_salt;
+        return static::$salt;
     }
 
     /**
@@ -302,6 +302,6 @@ class Security
      */
     public static function setSalt(string $salt): void
     {
-        static::$_salt = $salt;
+        static::$salt = $salt;
     }
 }
