@@ -73,6 +73,11 @@ class Text
      */
     public static function uuid(): string
     {
+        $generator = Configure::read('Text.uuidGenerator');
+        if ($generator instanceof Closure) {
+            return $generator();
+        }
+
         // random bytes
         $value = random_bytes(16);
 
