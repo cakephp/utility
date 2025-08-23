@@ -16,7 +16,9 @@ declare(strict_types=1);
  */
 namespace Cake\Utility;
 
+use Cake\Core\Configure;
 use Cake\Core\Exception\CakeException;
+use Closure;
 use InvalidArgumentException;
 use Transliterator;
 use function Cake\I18n\__d;
@@ -215,7 +217,7 @@ class Text
 
         $dataKeys = array_keys($data);
         $hashKeys = array_map(
-            fn($str) => hash('xxh128', $str),
+            fn(int|string $str) => hash('xxh128', (string)$str),
             $dataKeys,
         );
         /** @var array<string, string> $tempData */
