@@ -33,21 +33,21 @@ class Text
      *
      * @var \Transliterator|null Transliterator instance.
      */
-    protected static ?Transliterator $_defaultTransliterator = null;
+    protected static ?Transliterator $defaultTransliterator = null;
 
     /**
      * Default transliterator id string.
      *
      * @var string Transliterator identifier string.
      */
-    protected static string $_defaultTransliteratorId = 'Any-Latin; Latin-ASCII; [\u0080-\u7fff] remove';
+    protected static string $defaultTransliteratorId = 'Any-Latin; Latin-ASCII; [\u0080-\u7fff] remove';
 
     /**
      * Default HTML tags which must not be counted for truncating text.
      *
      * @var array<string>
      */
-    protected static array $_defaultHtmlNoCount = [
+    protected static array $defaultHtmlNoCount = [
         'style',
         'script',
     ];
@@ -609,7 +609,7 @@ class Text
             preg_match_all('/(<\/?([\w+]+)[^>]*>)?([^<>]*)/', $text, $tags, PREG_SET_ORDER);
             foreach ($tags as $tag) {
                 $contentLength = 0;
-                if (!in_array($tag[2], static::$_defaultHtmlNoCount, true)) {
+                if (!in_array($tag[2], static::$defaultHtmlNoCount, true)) {
                     $contentLength = self::strlen($tag[3], $options);
                 }
 
@@ -1051,7 +1051,7 @@ class Text
      */
     public static function getTransliterator(): ?Transliterator
     {
-        return static::$_defaultTransliterator;
+        return static::$defaultTransliterator;
     }
 
     /**
@@ -1062,7 +1062,7 @@ class Text
      */
     public static function setTransliterator(Transliterator $transliterator): void
     {
-        static::$_defaultTransliterator = $transliterator;
+        static::$defaultTransliterator = $transliterator;
     }
 
     /**
@@ -1072,7 +1072,7 @@ class Text
      */
     public static function getTransliteratorId(): string
     {
-        return static::$_defaultTransliteratorId;
+        return static::$defaultTransliteratorId;
     }
 
     /**
@@ -1089,7 +1089,7 @@ class Text
         }
 
         static::setTransliterator($transliterator);
-        static::$_defaultTransliteratorId = $transliteratorId;
+        static::$defaultTransliteratorId = $transliteratorId;
     }
 
     /**
@@ -1106,7 +1106,7 @@ class Text
     public static function transliterate(string $string, Transliterator|string|null $transliterator = null): string
     {
         if (!$transliterator) {
-            $transliterator = static::$_defaultTransliterator ?: static::$_defaultTransliteratorId;
+            $transliterator = static::$defaultTransliterator ?: static::$defaultTransliteratorId;
         }
 
         $return = transliterator_transliterate($transliterator, $string);
