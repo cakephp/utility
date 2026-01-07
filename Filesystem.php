@@ -83,7 +83,7 @@ class Filesystem
             $path,
             $flags,
             RecursiveIteratorIterator::CHILD_FIRST,
-            skipHiddenDirs: true,
+            includeHiddenDirs: false,
         );
 
         if ($filter === null) {
@@ -116,7 +116,7 @@ class Filesystem
      * @param string $path Directory path.
      * @param int|null $flags Flags for FilesystemIterator::__construct();
      * @param int<0, 2> $mode RecursiveIteratorIterator mode (LEAVES_ONLY, SELF_FIRST, CHILD_FIRST).
-     * @param bool $skipHiddenDirs Whether to skip hidden directories (default: true).
+     * @param bool $includeHiddenDirs Whether to include hidden directories (default: false).
      * @param \Closure|null $customFilter Optional custom filter callback for RecursiveCallbackFilterIterator.
      *   Receives SplFileInfo, returns bool. Combined with hidden directory filtering if enabled.
      * @return \RecursiveIteratorIterator
@@ -125,7 +125,7 @@ class Filesystem
         string $path,
         ?int $flags = null,
         int $mode = RecursiveIteratorIterator::CHILD_FIRST,
-        bool $skipHiddenDirs = false,
+        bool $includeHiddenDirs = false,
         ?Closure $customFilter = null,
     ): RecursiveIteratorIterator {
         $flags ??= FilesystemIterator::KEY_AS_PATHNAME
@@ -135,10 +135,10 @@ class Filesystem
         $directory = new RecursiveDirectoryIterator($path, $flags);
 
         // Apply filtering if needed
-        if ($skipHiddenDirs || $customFilter !== null) {
-            $filterCallback = function (SplFileInfo $current) use ($skipHiddenDirs, $customFilter): bool {
-                // Skip hidden directories if enabled
-                if ($skipHiddenDirs && str_starts_with($current->getFilename(), '.') && $current->isDir()) {
+        if (!$includeHiddenDirs || $customFilter !== null) {
+            $filterCallback = function (SplFileInfo $current) use ($includeHiddenDirs, $customFilter): bool {
+                // Skip hidden directories if not included
+                if (!$includeHiddenDirs && str_starts_with($current->getFilename(), '.') && $current->isDir()) {
                     return false;
                 }
 
