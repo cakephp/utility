@@ -125,7 +125,7 @@ class Filesystem
         string $path,
         ?int $flags = null,
         int $mode = RecursiveIteratorIterator::CHILD_FIRST,
-        bool $skipHiddenDirs = true,
+        bool $skipHiddenDirs = false,
         ?Closure $customFilter = null,
     ): RecursiveIteratorIterator {
         $flags ??= FilesystemIterator::KEY_AS_PATHNAME
