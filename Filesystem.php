@@ -79,32 +79,81 @@ class Filesystem
      */
     public function findRecursive(string $path, Closure|string|null $filter = null, ?int $flags = null): Iterator
     {
-        $flags ??= FilesystemIterator::KEY_AS_PATHNAME
-            | FilesystemIterator::CURRENT_AS_FILEINFO
-            | FilesystemIterator::SKIP_DOTS;
-        $directory = new RecursiveDirectoryIterator($path, $flags);
-
-        $dirFilter = new RecursiveCallbackFilterIterator(
-            $directory,
-            function (SplFileInfo $current) {
-                if (str_starts_with($current->getFilename(), '.') && $current->isDir()) {
-                    return false;
-                }
-
-                return true;
-            },
-        );
-
-        $flatten = new RecursiveIteratorIterator(
-            $dirFilter,
+        $iterator = $this->createRecursiveIterator(
+            $path,
+            $flags,
             RecursiveIteratorIterator::CHILD_FIRST,
+            skipHiddenDirs: true,
         );
 
         if ($filter === null) {
-            return $flatten;
+            return $iterator;
         }
 
-        return $this->filterIterator($flatten, $filter);
+        return $this->filterIterator($iterator, $filter);
+    }
+
+    /**
+     * Create a recursive directory iterator with optional filtering.
+     *
+     * This is a building block method for creating custom recursive file iteration.
+     * Consumers can wrap the returned iterator with additional filters or process it directly.
+     *
+     * Example:
+     * ```php
+     * $filesystem = new Filesystem();
+     * $iterator = $filesystem->createRecursiveIterator(
+     *     '/path/to/dir',
+     *     mode: RecursiveIteratorIterator::LEAVES_ONLY,
+     *     customFilter: fn($file) => $file->getExtension() === 'php'
+     * );
+     *
+     * foreach ($iterator as $file) {
+     *     echo $file->getPathname() . PHP_EOL;
+     * }
+     * ```
+     *
+     * @param string $path Directory path.
+     * @param int|null $flags Flags for FilesystemIterator::__construct();
+     * @param int<0, 2> $mode RecursiveIteratorIterator mode (LEAVES_ONLY, SELF_FIRST, CHILD_FIRST).
+     * @param bool $skipHiddenDirs Whether to skip hidden directories (default: true).
+     * @param \Closure|null $customFilter Optional custom filter callback for RecursiveCallbackFilterIterator.
+     *   Receives SplFileInfo, returns bool. Combined with hidden directory filtering if enabled.
+     * @return \RecursiveIteratorIterator
+     */
+    public function createRecursiveIterator(
+        string $path,
+        ?int $flags = null,
+        int $mode = RecursiveIteratorIterator::CHILD_FIRST,
+        bool $skipHiddenDirs = true,
+        ?Closure $customFilter = null,
+    ): RecursiveIteratorIterator {
+        $flags ??= FilesystemIterator::KEY_AS_PATHNAME
+            | FilesystemIterator::CURRENT_AS_FILEINFO
+            | FilesystemIterator::SKIP_DOTS;
+
+        $directory = new RecursiveDirectoryIterator($path, $flags);
+
+        // Apply filtering if needed
+        if ($skipHiddenDirs || $customFilter !== null) {
+            $filterCallback = function (SplFileInfo $current) use ($skipHiddenDirs, $customFilter): bool {
+                // Skip hidden directories if enabled
+                if ($skipHiddenDirs && str_starts_with($current->getFilename(), '.') && $current->isDir()) {
+                    return false;
+                }
+
+                // Apply custom filter if provided
+                if ($customFilter !== null) {
+                    return $customFilter($current);
+                }
+
+                return true;
+            };
+
+            $directory = new RecursiveCallbackFilterIterator($directory, $filterCallback);
+        }
+
+        return new RecursiveIteratorIterator($directory, $mode);
     }
 
     /**
