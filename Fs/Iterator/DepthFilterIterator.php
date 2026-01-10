@@ -41,8 +41,8 @@ final class DepthFilterIterator extends FilterIterator
      */
     public function __construct(
         Iterator $iterator,
-        protected DepthOperator $operator,
-        protected int $value,
+        protected readonly DepthOperator $operator,
+        protected readonly int $value,
     ) {
         parent::__construct($iterator);
     }

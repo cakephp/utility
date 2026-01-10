@@ -28,21 +28,13 @@ use Iterator;
 class FileTypeFilterIterator extends FilterIterator
 {
     /**
-     * @var \Cake\Utility\Fs\Enum\FinderMode
-     */
-    protected FinderMode $mode;
-
-    /**
-     * Constructor.
-     *
      * @param \Iterator $iterator The iterator to filter
      * @param \Cake\Utility\Fs\Enum\FinderMode $mode The mode (FILES, DIRECTORIES, or ALL)
      */
     public function __construct(
         Iterator $iterator,
-        FinderMode $mode,
+        protected readonly FinderMode $mode,
     ) {
-        $this->mode = $mode;
         parent::__construct($iterator);
     }
 

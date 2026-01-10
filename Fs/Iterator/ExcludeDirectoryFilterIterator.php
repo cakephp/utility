@@ -37,7 +37,7 @@ final class ExcludeDirectoryFilterIterator extends RecursiveFilterIterator
      */
     public function __construct(
         RecursiveIterator $iterator,
-        protected array $excludeDirs,
+        protected readonly array $excludeDirs,
     ) {
         parent::__construct($iterator);
     }

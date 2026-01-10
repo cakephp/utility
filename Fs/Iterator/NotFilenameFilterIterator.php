@@ -33,7 +33,7 @@ final class NotFilenameFilterIterator extends FilterIterator
      */
     public function __construct(
         Iterator $iterator,
-        protected array $patterns,
+        protected readonly array $patterns,
     ) {
         parent::__construct($iterator);
     }

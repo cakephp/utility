@@ -19,6 +19,7 @@ namespace Cake\Utility\Fs;
 use AppendIterator;
 use Cake\Utility\Fs\Enum\DepthOperator;
 use Cake\Utility\Fs\Enum\FinderMode;
+use Cake\Utility\Fs\Iterator\CallbackFilterIterator;
 use Cake\Utility\Fs\Iterator\ContainsPathFilterIterator;
 use Cake\Utility\Fs\Iterator\DepthFilterIterator;
 use Cake\Utility\Fs\Iterator\ExcludeDirectoryFilterIterator;
@@ -29,6 +30,7 @@ use Cake\Utility\Fs\Iterator\HiddenFileFilterIterator;
 use Cake\Utility\Fs\Iterator\MultiplePcreFilterIterator;
 use Cake\Utility\Fs\Iterator\NotContainsPathFilterIterator;
 use Cake\Utility\Fs\Iterator\NotFilenameFilterIterator;
+use Closure;
 use FilesystemIterator;
 use Iterator;
 use RecursiveDirectoryIterator;
@@ -143,6 +145,13 @@ class Finder
     protected ?FinderMode $mode = null;
 
     /**
+     * Custom filter callbacks
+     *
+     * @var array<\Closure(\SplFileInfo, string): bool>
+     */
+    protected array $filters = [];
+
+    /**
      * Add a path to search in.
      *
      * @param string $path The directory path
@@ -231,6 +240,27 @@ class Finder
     public function pattern(string $pattern)
     {
         $this->globPatterns[] = $pattern;
+
+        return $this;
+    }
+
+    /**
+     * Add a custom filter callback.
+     *
+     * The callback receives the SplFileInfo object and relative path,
+     * and should return true to include the file.
+     *
+     * Example:
+     * ```php
+     * $finder->filter(fn(\SplFileInfo $file) => $file->getSize() > 1024);
+     * ```
+     *
+     * @param \Closure(\SplFileInfo, string): bool $callback Filter callback
+     * @return $this
+     */
+    public function filter(Closure $callback)
+    {
+        $this->filters[] = $callback;
 
         return $this;
     }
@@ -407,7 +437,12 @@ class Finder
 
         // Apply glob pattern filtering
         if ($this->globPatterns !== []) {
-            return new GlobFilterIterator($iterator, $this->globPatterns, $path);
+            $iterator = new GlobFilterIterator($iterator, $this->globPatterns, $path);
+        }
+
+        // Apply custom filters
+        foreach ($this->filters as $callback) {
+            $iterator = new CallbackFilterIterator($iterator, $callback, $path);
         }
 
         return $iterator;

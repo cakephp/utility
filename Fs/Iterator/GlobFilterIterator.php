@@ -37,8 +37,8 @@ final class GlobFilterIterator extends FilterIterator
      */
     public function __construct(
         Iterator $iterator,
-        protected array $patterns,
-        protected string $basePath,
+        protected readonly array $patterns,
+        protected readonly string $basePath,
     ) {
         parent::__construct($iterator);
     }

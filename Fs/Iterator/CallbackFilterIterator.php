@@ -17,26 +17,27 @@ declare(strict_types=1);
 namespace Cake\Utility\Fs\Iterator;
 
 use Cake\Utility\Fs\Path;
+use Closure;
 use FilterIterator;
 use Iterator;
 
 /**
- * Filters files by filename using glob patterns.
+ * Filters files using a custom callback function.
  *
- * Supports glob patterns like:
- * - `*.php` - All PHP files
- * - `Test*.php` - Files starting with Test
- * - `{foo,bar}.php` - foo.php or bar.php
+ * This is applied as a final stage filter after all built-in filters,
+ * providing flexibility for edge cases not covered by dedicated iterators.
  */
-final class FilenameFilterIterator extends FilterIterator
+final class CallbackFilterIterator extends FilterIterator
 {
     /**
-     * @param \Iterator<mixed, \SplFileInfo> $iterator The iterator to filter
-     * @param array<string> $patterns Glob patterns to match against
+     * @param \Iterator $iterator The iterator to filter
+     * @param \Closure(\SplFileInfo, string): bool $callback Filter callback
+     * @param string $basePath Base path for calculating relative paths
      */
     public function __construct(
         Iterator $iterator,
-        protected readonly array $patterns,
+        protected Closure $callback,
+        protected readonly string $basePath,
     ) {
         parent::__construct($iterator);
     }
@@ -46,14 +47,15 @@ final class FilenameFilterIterator extends FilterIterator
      */
     public function accept(): bool
     {
-        $filename = $this->current()->getFilename();
+        /** @var \SplFileInfo $file */
+        $file = $this->current();
 
-        foreach ($this->patterns as $pattern) {
-            if (Path::matches($pattern, $filename)) {
-                return true;
-            }
-        }
+        // Calculate relative path
+        $relativePath = Path::makeRelative(
+            Path::normalize($file->getPathname()),
+            Path::normalize($this->basePath),
+        );
 
-        return false;
+        return ($this->callback)($file, $relativePath);
     }
 }
