@@ -11,19 +11,28 @@ declare(strict_types=1);
  *
  * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  * @link          https://cakephp.org CakePHP(tm) Project
- * @since         5.3.0
+ * @since         5.4.0
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Utility\Fs;
 
-use Cake\Utility\Filesystem as FilesystemUtil;
+use AppendIterator;
 use Cake\Utility\Fs\Enum\DepthOperator;
 use Cake\Utility\Fs\Enum\FinderMode;
-use Closure;
-use Generator;
+use Cake\Utility\Fs\Iterator\ContainsPathFilterIterator;
+use Cake\Utility\Fs\Iterator\DepthFilterIterator;
+use Cake\Utility\Fs\Iterator\ExcludeDirectoryFilterIterator;
+use Cake\Utility\Fs\Iterator\FilenameFilterIterator;
+use Cake\Utility\Fs\Iterator\FileTypeFilterIterator;
+use Cake\Utility\Fs\Iterator\GlobFilterIterator;
+use Cake\Utility\Fs\Iterator\HiddenFileFilterIterator;
+use Cake\Utility\Fs\Iterator\MultiplePcreFilterIterator;
+use Cake\Utility\Fs\Iterator\NotContainsPathFilterIterator;
+use Cake\Utility\Fs\Iterator\NotFilenameFilterIterator;
+use FilesystemIterator;
 use Iterator;
+use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use SplFileInfo;
 
 /**
  * Finder provides a fluent interface for finding files and directories.
@@ -108,7 +117,7 @@ class Finder
     /**
      * Depth conditions
      *
-     * @var array<array{0: \Cake\Filesystem\Enum\DepthOperator, 1: int}>
+     * @var array<array{0: \Cake\Utility\Fs\Enum\DepthOperator, 1: int}>
      */
     protected array $depths = [];
 
@@ -129,24 +138,9 @@ class Finder
     /**
      * The iteration mode (files, directories, or all)
      *
-     * @var \Cake\Filesystem\Enum\FinderMode|null
+     * @var \Cake\Utility\Fs\Enum\FinderMode|null
      */
     protected ?FinderMode $mode = null;
-
-    /**
-     * The internal filesystem utility
-     *
-     * @var \Cake\Utility\Filesystem
-     */
-    protected FilesystemUtil $filesystem;
-
-    /**
-     * Constructor
-     */
-    public function __construct()
-    {
-        $this->filesystem = new FilesystemUtil();
-    }
 
     /**
      * Add a path to search in.
@@ -245,7 +239,7 @@ class Finder
      * Add a depth condition.
      *
      * @param int $level The depth level (0 = top-level directory)
-     * @param \Cake\Filesystem\Enum\DepthOperator $operator The comparison operator (default: EQUAL)
+     * @param \Cake\Utility\Fs\Enum\DepthOperator $operator The comparison operator (default: EQUAL)
      * @return $this
      */
     public function depth(int $level, DepthOperator $operator = DepthOperator::EQUAL)
@@ -319,60 +313,52 @@ class Finder
     /**
      * Iterate over items matching the criteria.
      *
-     * @return \Generator<\SplFileInfo>
+     * @return \Iterator<\SplFileInfo>
      */
-    protected function iterate(): Generator
+    protected function iterate(): Iterator
     {
+        // Combine results from all paths
+        if (count($this->paths) === 1) {
+            return $this->buildIterator($this->paths[0]);
+        }
+
+        // Multiple paths - use AppendIterator
+        $append = new AppendIterator();
         foreach ($this->paths as $path) {
-            if (!$this->recursive || $this->isDepthZero()) {
-                yield from $this->iterateNonRecursive($path);
-            } else {
-                yield from $this->iterateRecursive($path);
-            }
-        }
-    }
-
-    /**
-     * Check if file/directory matches the mode filter.
-     *
-     * @param \SplFileInfo $file The file or directory to check
-     * @return bool
-     */
-    protected function matchesMode(SplFileInfo $file): bool
-    {
-        return match ($this->mode) {
-            FinderMode::FILES => $file->isFile(),
-            FinderMode::DIRECTORIES => $file->isDir(),
-            FinderMode::ALL => true,
-            null => true,
-        };
-    }
-
-    /**
-     * Check if depth is limited to zero (top-level only).
-     *
-     * @return bool
-     */
-    protected function isDepthZero(): bool
-    {
-        foreach ($this->depths as $condition) {
-            if ($condition === [DepthOperator::EQUAL, 0]) {
-                return true;
-            }
+            $append->append($this->buildIterator($path));
         }
 
-        return false;
+        return $append;
     }
 
     /**
-     * Iterate recursively through a directory.
+     * Build an iterator chain with all configured filters.
      *
      * @param string $path The directory path
-     * @return \Generator<\SplFileInfo>
+     * @return \Iterator<\SplFileInfo>
      */
-    protected function iterateRecursive(string $path): Generator
+    protected function buildIterator(string $path): Iterator
     {
-        $normalizedBasePath = Path::normalize($path);
+        $flags = FilesystemIterator::KEY_AS_PATHNAME
+            | FilesystemIterator::CURRENT_AS_FILEINFO
+            | FilesystemIterator::SKIP_DOTS;
+
+        $directory = new RecursiveDirectoryIterator($path, $flags);
+
+        // Apply hidden file filtering
+        if ($this->ignoreHiddenFiles) {
+            $directory = new HiddenFileFilterIterator($directory);
+        }
+
+        // Apply directory exclusions
+        if ($this->exclude !== []) {
+            $directory = new ExcludeDirectoryFilterIterator($directory, $this->exclude);
+        }
+
+        // Apply path pattern exclusions during recursion
+        if ($this->notPathPatterns !== []) {
+            $directory = new NotContainsPathFilterIterator($directory, $this->notPathPatterns);
+        }
 
         // Use SELF_FIRST when looking for directories to include them in iteration
         // Use LEAVES_ONLY when looking for files only for optimization
@@ -380,256 +366,50 @@ class Finder
             ? RecursiveIteratorIterator::LEAVES_ONLY
             : RecursiveIteratorIterator::SELF_FIRST;
 
-        $iterator = $this->filesystem->createRecursiveIterator(
-            $path,
-            mode: $iteratorMode,
-            includeHiddenDirs: !$this->ignoreHiddenFiles,
-            customFilter: $this->buildFilter(),
-        );
+        $iterator = new RecursiveIteratorIterator($directory, $iteratorMode);
 
-        foreach ($iterator as $file) {
-            /** @var \SplFileInfo $file */
-            if (!$this->matchesMode($file)) {
-                continue;
-            }
-
-            if ($this->ignoreHiddenFiles && str_starts_with($file->getFilename(), '.')) {
-                continue;
-            }
-
-            if (!$this->matchesNamePatterns($file)) {
-                continue;
-            }
-
-            if (!$this->matchesPathPatterns($file)) {
-                continue;
-            }
-
-            if (!$this->matchesDepth($file, $normalizedBasePath)) {
-                continue;
-            }
-
-            if (!$this->matchesGlobPatterns($file, $normalizedBasePath)) {
-                continue;
-            }
-
-            yield $file;
-        }
-    }
-
-    /**
-     * Iterate non-recursively through a directory.
-     *
-     * @param string $path The directory path
-     * @return \Generator<\SplFileInfo>
-     */
-    protected function iterateNonRecursive(string $path): Generator
-    {
-        $iterator = $this->filesystem->createIterator(
-            $path,
-            customFilter: $this->buildNonRecursiveFilter(),
-        );
-
-        foreach ($iterator as $file) {
-            /** @var \SplFileInfo $file */
-            if (!$this->matchesMode($file)) {
-                continue;
-            }
-
-            if ($this->ignoreHiddenFiles && str_starts_with($file->getFilename(), '.')) {
-                continue;
-            }
-
-            if (!$this->matchesNamePatterns($file)) {
-                continue;
-            }
-
-            yield $file;
-        }
-    }
-
-    /**
-     * Build a filter callback for the recursive iterator.
-     *
-     * @return \Closure|null
-     */
-    protected function buildFilter(): ?Closure
-    {
-        if ($this->exclude === [] && $this->notPathPatterns === []) {
-            return null;
+        // Apply file type filtering
+        if ($this->mode !== null && $this->mode !== FinderMode::ALL) {
+            $iterator = new FileTypeFilterIterator($iterator, $this->mode);
         }
 
-        return function (SplFileInfo $file): bool {
-            // Check excluded directories
-            foreach ($this->exclude as $excluded) {
-                if ($file->isDir() && str_contains($file->getPathname(), DIRECTORY_SEPARATOR . $excluded)) {
-                    return false;
-                }
-            }
-
-            // Check excluded path patterns
-            foreach ($this->notPathPatterns as $pattern) {
-                if (str_contains($file->getPathname(), $pattern)) {
-                    return false;
-                }
-            }
-
-            return true;
-        };
-    }
-
-    /**
-     * Build a filter callback for the non-recursive iterator.
-     *
-     * @return \Closure|null
-     */
-    protected function buildNonRecursiveFilter(): ?Closure
-    {
-        if ($this->exclude === []) {
-            return null;
+        // Apply filename filtering
+        if ($this->names !== []) {
+            $iterator = new FilenameFilterIterator($iterator, $this->names);
+        }
+        if ($this->notNames !== []) {
+            $iterator = new NotFilenameFilterIterator($iterator, $this->notNames);
         }
 
-        return function (SplFileInfo $file): bool {
-            if (!$file->isDir()) {
-                return true;
-            }
-
-            $filename = $file->getFilename();
-            foreach ($this->exclude as $excluded) {
-                if ($filename === $excluded) {
-                    return false;
-                }
-            }
-
-            return true;
-        };
-    }
-
-    /**
-     * Check if file matches name patterns.
-     *
-     * @param \SplFileInfo $file The file to check
-     * @return bool
-     */
-    protected function matchesNamePatterns(SplFileInfo $file): bool
-    {
-        $filename = $file->getFilename();
-
-        // Check negative patterns first
-        foreach ($this->notNames as $pattern) {
-            if (Path::matches($pattern, $filename)) {
-                return false;
-            }
-        }
-
-        // If no positive patterns, accept all
-        if ($this->names === []) {
-            return true;
-        }
-
-        // Must match at least one positive pattern
-        foreach ($this->names as $pattern) {
-            if (Path::matches($pattern, $filename)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Check if file matches path patterns.
-     *
-     * @param \SplFileInfo $file The file to check
-     * @return bool
-     */
-    protected function matchesPathPatterns(SplFileInfo $file): bool
-    {
-        // Must match all include patterns
+        // Apply path pattern inclusions
         if ($this->pathPatterns !== []) {
-            $matched = false;
+            // Check if patterns are regex (start with delimiter like /, #, ~)
+            $hasRegex = false;
             foreach ($this->pathPatterns as $pattern) {
-                if (str_contains($file->getPathname(), $pattern)) {
-                    $matched = true;
+                if (preg_match('/^[\/#~]/', $pattern)) {
+                    $hasRegex = true;
                     break;
                 }
             }
-            if (!$matched) {
-                return false;
-            }
+
+            $iterator = $hasRegex
+                ? new MultiplePcreFilterIterator($iterator, $this->pathPatterns)
+                : new ContainsPathFilterIterator($iterator, $this->pathPatterns);
         }
 
-        return true;
-    }
-
-    /**
-     * Check if file matches glob patterns.
-     *
-     * @param \SplFileInfo $file The file to check
-     * @param string $normalizedBasePath The normalized base path to calculate relative path from
-     * @return bool
-     */
-    protected function matchesGlobPatterns(SplFileInfo $file, string $normalizedBasePath): bool
-    {
-        if ($this->globPatterns === []) {
-            return true;
+        // Apply depth filtering (handles non-recursive mode when recursive=false)
+        if (!$this->recursive) {
+            $iterator = new DepthFilterIterator($iterator, DepthOperator::EQUAL, 0);
         }
-
-        $relativePath = Path::makeRelative($file->getPathname(), $normalizedBasePath);
-
-        foreach ($this->globPatterns as $pattern) {
-            if (Path::matches($pattern, $relativePath)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Check if file matches depth conditions.
-     *
-     * @param \SplFileInfo $file The file to check
-     * @param string $normalizedBasePath The normalized base path to calculate depth from
-     * @return bool
-     */
-    protected function matchesDepth(SplFileInfo $file, string $normalizedBasePath): bool
-    {
-        if ($this->depths === []) {
-            return true;
-        }
-
-        $filePath = Path::normalize($file->getPath());
-        $relativePath = Path::makeRelative($filePath, $normalizedBasePath);
-
-        $depth = $relativePath === '' ? 0 : count(explode('/', $relativePath));
-
         foreach ($this->depths as [$operator, $level]) {
-            if (!$this->evaluateDepthCondition($depth, $operator, $level)) {
-                return false;
-            }
+            $iterator = new DepthFilterIterator($iterator, $operator, $level);
         }
 
-        return true;
-    }
+        // Apply glob pattern filtering
+        if ($this->globPatterns !== []) {
+            return new GlobFilterIterator($iterator, $this->globPatterns, $path);
+        }
 
-    /**
-     * Evaluate a depth condition.
-     *
-     * @param int $depth The actual depth
-     * @param \Cake\Filesystem\Enum\DepthOperator $operator The comparison operator
-     * @param int $level The target depth level
-     * @return bool
-     */
-    protected function evaluateDepthCondition(int $depth, DepthOperator $operator, int $level): bool
-    {
-        return match ($operator) {
-            DepthOperator::EQUAL => $depth === $level,
-            DepthOperator::NOT_EQUAL => $depth !== $level,
-            DepthOperator::LESS_THAN => $depth < $level,
-            DepthOperator::GREATER_THAN => $depth > $level,
-            DepthOperator::LESS_THAN_OR_EQUAL => $depth <= $level,
-            DepthOperator::GREATER_THAN_OR_EQUAL => $depth >= $level,
-        };
+        return $iterator;
     }
 }

@@ -14,27 +14,36 @@ declare(strict_types=1);
  * @since         5.4.0
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
-namespace Cake\Utility\Fs\Enum;
+namespace Cake\Utility\Fs\Iterator;
+
+use RecursiveFilterIterator;
 
 /**
- * Enum for Finder iteration modes
+ * Filters out hidden files and directories (those starting with a dot).
  *
- * Defines what type of filesystem items to iterate over.
+ * @internal
  */
-enum FinderMode
+final class HiddenFileFilterIterator extends RecursiveFilterIterator
 {
     /**
-     * Iterate only files
+     * @inheritDoc
      */
-    case FILES;
+    public function accept(): bool
+    {
+        /** @var \SplFileInfo $current */
+        $current = $this->current();
+
+        return !str_starts_with($current->getFilename(), '.');
+    }
 
     /**
-     * Iterate only directories
+     * @inheritDoc
      */
-    case DIRECTORIES;
+    public function getChildren(): self
+    {
+        /** @var \RecursiveIterator $inner */
+        $inner = $this->getInnerIterator();
 
-    /**
-     * Iterate both files and directories
-     */
-    case ALL;
+        return new self($inner->getChildren());
+    }
 }

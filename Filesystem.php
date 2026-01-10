@@ -17,11 +17,11 @@ declare(strict_types=1);
 namespace Cake\Utility;
 
 use Cake\Core\Exception\CakeException;
+use Cake\Utility\Fs\Iterator\HiddenFileFilterIterator;
 use CallbackFilterIterator;
 use Closure;
 use FilesystemIterator;
 use Iterator;
-use RecursiveCallbackFilterIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RegexIterator;
@@ -55,40 +55,6 @@ class Filesystem
      */
     public function find(string $path, Closure|string|null $filter = null, ?int $flags = null): Iterator
     {
-        return $this->createIterator($path, $flags, $filter);
-    }
-
-    /**
-     * Create a non-recursive directory iterator with optional filtering.
-     *
-     * This is a building block method for creating custom non-recursive file iteration.
-     * Consumers can wrap the returned iterator with additional filters or process it directly.
-     *
-     * Example:
-     * ```php
-     * $filesystem = new Filesystem();
-     * $iterator = $filesystem->createIterator(
-     *     '/path/to/dir',
-     *     customFilter: fn($file) => $file->getExtension() === 'php'
-     * );
-     *
-     * foreach ($iterator as $file) {
-     *     echo $file->getPathname() . PHP_EOL;
-     * }
-     * ```
-     *
-     * @param string $path Directory path.
-     * @param int|null $flags Flags for FilesystemIterator::__construct();
-     * @param \Closure|string|null $customFilter Optional filter. If string will be used as regex for
-     *   filtering using `RegexIterator`, if callable will be as callback for `CallbackFilterIterator`.
-     *   Receives SplFileInfo, returns bool.
-     * @return \Iterator
-     */
-    public function createIterator(
-        string $path,
-        ?int $flags = null,
-        Closure|string|null $customFilter = null,
-    ): Iterator {
         $flags ??= FilesystemIterator::KEY_AS_PATHNAME
             | FilesystemIterator::CURRENT_AS_FILEINFO
             | FilesystemIterator::SKIP_DOTS;
@@ -96,15 +62,15 @@ class Filesystem
         $directory = new FilesystemIterator($path, $flags);
 
         // Apply filter if provided
-        if ($customFilter === null) {
+        if ($filter === null) {
             return $directory;
         }
 
-        if (is_string($customFilter)) {
-            return new RegexIterator($directory, $customFilter);
+        if (is_string($filter)) {
+            return new RegexIterator($directory, $filter);
         }
 
-        return new CallbackFilterIterator($directory, $customFilter);
+        return new CallbackFilterIterator($directory, $filter);
     }
 
     /**
@@ -119,89 +85,27 @@ class Filesystem
      */
     public function findRecursive(string $path, Closure|string|null $filter = null, ?int $flags = null): Iterator
     {
-        return $this->createRecursiveIterator(
-            $path,
-            $flags,
-            RecursiveIteratorIterator::CHILD_FIRST,
-            includeHiddenDirs: false,
-            customFilter: $filter,
-        );
-    }
-
-    /**
-     * Create a recursive directory iterator with optional filtering.
-     *
-     * This is a building block method for creating custom recursive file iteration.
-     * Consumers can wrap the returned iterator with additional filters or process it directly.
-     *
-     * Example:
-     * ```php
-     * $filesystem = new Filesystem();
-     * $iterator = $filesystem->createRecursiveIterator(
-     *     '/path/to/dir',
-     *     mode: RecursiveIteratorIterator::LEAVES_ONLY,
-     *     customFilter: fn($file) => $file->getExtension() === 'php'
-     * );
-     *
-     * foreach ($iterator as $file) {
-     *     echo $file->getPathname() . PHP_EOL;
-     * }
-     * ```
-     *
-     * @param string $path Directory path.
-     * @param int|null $flags Flags for FilesystemIterator::__construct();
-     * @param int<0, 2> $mode RecursiveIteratorIterator mode (LEAVES_ONLY, SELF_FIRST, CHILD_FIRST).
-     * @param bool $includeHiddenDirs Whether to include hidden directories (default: false).
-     * @param \Closure|string|null $customFilter Optional filter. If string will be used as regex for
-     *   filtering using `RegexIterator` (applied after iteration), if callable will be used with
-     *   `RecursiveCallbackFilterIterator` (applied during iteration). Combined with hidden directory
-     *   filtering if enabled.
-     * @return \RecursiveIteratorIterator|\Iterator
-     */
-    public function createRecursiveIterator(
-        string $path,
-        ?int $flags = null,
-        int $mode = RecursiveIteratorIterator::CHILD_FIRST,
-        bool $includeHiddenDirs = false,
-        Closure|string|null $customFilter = null,
-    ): Iterator {
         $flags ??= FilesystemIterator::KEY_AS_PATHNAME
             | FilesystemIterator::CURRENT_AS_FILEINFO
             | FilesystemIterator::SKIP_DOTS;
 
         $directory = new RecursiveDirectoryIterator($path, $flags);
 
-        // Separate callback filters from regex filters
-        $callbackFilter = $customFilter instanceof Closure ? $customFilter : null;
-        $regexFilter = is_string($customFilter) ? $customFilter : null;
+        // Filter out hidden directories
+        $filtered = new HiddenFileFilterIterator($directory);
 
-        // Apply callback filtering during iteration if needed
-        if (!$includeHiddenDirs || $callbackFilter !== null) {
-            $filterCallback = function (SplFileInfo $current) use ($includeHiddenDirs, $callbackFilter): bool {
-                // Skip hidden directories if not included
-                if (!$includeHiddenDirs && str_starts_with($current->getFilename(), '.') && $current->isDir()) {
-                    return false;
-                }
+        $iterator = new RecursiveIteratorIterator($filtered, RecursiveIteratorIterator::CHILD_FIRST);
 
-                // Apply custom callback filter if provided
-                if ($callbackFilter !== null) {
-                    return $callbackFilter($current);
-                }
-
-                return true;
-            };
-
-            $directory = new RecursiveCallbackFilterIterator($directory, $filterCallback);
+        // Apply custom filter if provided
+        if ($filter === null) {
+            return $iterator;
         }
 
-        $iterator = new RecursiveIteratorIterator($directory, $mode);
-
-        // Apply regex filter after iteration if provided
-        if ($regexFilter !== null) {
-            return new RegexIterator($iterator, $regexFilter);
+        if (is_string($filter)) {
+            return new RegexIterator($iterator, $filter);
         }
 
-        return $iterator;
+        return new CallbackFilterIterator($iterator, $filter);
     }
 
     /**
