@@ -11,11 +11,12 @@ declare(strict_types=1);
  *
  * @copyright     Copyright (c) Cake Software Foundation, Inc. (https://cakefoundation.org)
  * @link          https://cakephp.org CakePHP(tm) Project
- * @since         5.2.0
+ * @since         5.4.0
  * @license       https://opensource.org/licenses/mit-license.php MIT License
  */
 namespace Cake\Utility\Fs\Iterator;
 
+use Cake\Utility\Fs\Path;
 use FilterIterator;
 use Iterator;
 
@@ -42,7 +43,7 @@ final class MultiplePcreFilterIterator extends FilterIterator
      */
     public function accept(): bool
     {
-        $path = $this->current()->getPathname();
+        $path = Path::normalize($this->current()->getPathname());
 
         foreach ($this->patterns as $pattern) {
             if (preg_match($pattern, $path)) {
