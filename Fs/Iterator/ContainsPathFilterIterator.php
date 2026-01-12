@@ -17,28 +17,68 @@ declare(strict_types=1);
 namespace Cake\Utility\Fs\Iterator;
 
 use Cake\Utility\Fs\Path;
-use FilterIterator;
-use Iterator;
+use RecursiveFilterIterator;
+use RecursiveIterator;
 
 /**
- * Filters files to only include those whose path contains at least one
- * of the given patterns.
+ * Filters files based on whether their path contains or matches specific patterns.
  *
- * Uses simple string matching (str_contains) with OR logic.
+ * Supports two types of patterns:
+ * - String patterns: Uses substring matching (str_contains) for simple strings
+ * - Regex patterns: Uses preg_match for patterns starting with /, #, or ~
+ *
+ * Uses OR logic: accepts if any pattern matches.
+ * Always allows directories to enable recursive traversal.
+ *
+ * Can be used to include or exclude files based on the $negate parameter:
+ * - When $negate is false (default): includes files matching patterns
+ * - When $negate is true: excludes files matching patterns
  */
-final class ContainsPathFilterIterator extends FilterIterator
+final class ContainsPathFilterIterator extends RecursiveFilterIterator
 {
     /**
-     * @param \Iterator $iterator The iterator to filter
-     * @param array<string> $patterns Path patterns to include
+     * String patterns (substring matching, normalized)
+     *
+     * @var array<string>
+     */
+    protected array $stringPatterns;
+
+    /**
+     * Regex patterns (pattern matching, normalized)
+     *
+     * @var array<string>
+     */
+    protected array $regexPatterns;
+
+    /**
+     * @param \RecursiveIterator $iterator The iterator to filter
+     * @param array<string> $patterns Path patterns to match (string or regex)
+     * @param bool $negate When true, inverts the filter (excludes matching paths)
      */
     public function __construct(
-        Iterator $iterator,
-        protected array $patterns,
+        RecursiveIterator $iterator,
+        array $patterns,
+        protected readonly bool $negate = false,
     ) {
         parent::__construct($iterator);
-        // Normalize patterns once for cross-platform compatibility
-        $this->patterns = array_map(fn(string $p) => Path::normalize($p), $this->patterns);
+
+        // Separate regex patterns from string patterns
+        $regexPatterns = [];
+        $stringPatterns = [];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match('/^[\/#~]/', $pattern)) {
+                $regexPatterns[] = $pattern;
+            } else {
+                $stringPatterns[] = $pattern;
+            }
+        }
+
+        // Normalize string patterns for cross-platform compatibility
+        $this->stringPatterns = array_map(fn(string $p) => Path::normalize($p), $stringPatterns);
+
+        // Normalize regex patterns (normalize the paths they'll match against)
+        $this->regexPatterns = $regexPatterns;
     }
 
     /**
@@ -46,14 +86,54 @@ final class ContainsPathFilterIterator extends FilterIterator
      */
     public function accept(): bool
     {
-        $path = Path::normalize($this->current()->getPathname());
+        $current = $this->current();
 
-        foreach ($this->patterns as $pattern) {
+        // Always accept directories to allow traversal
+        if ($current->isDir()) {
+            return true;
+        }
+
+        // If no patterns at all, accept everything (no-op)
+        if ($this->stringPatterns === [] && $this->regexPatterns === []) {
+            return true;
+        }
+
+        // For files, check if path matches patterns
+        $path = Path::normalize($current->getPathname());
+        $matches = false;
+
+        // Check string patterns (substring matching)
+        foreach ($this->stringPatterns as $pattern) {
             if (str_contains($path, $pattern)) {
-                return true;
+                $matches = true;
+                break;
             }
         }
 
-        return false;
+        // Check regex patterns if no string match found
+        if (!$matches) {
+            foreach ($this->regexPatterns as $pattern) {
+                if (preg_match($pattern, $path)) {
+                    $matches = true;
+                    break;
+                }
+            }
+        }
+
+        return $this->negate ? !$matches : $matches;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getChildren(): self
+    {
+        /** @var \RecursiveIterator $inner */
+        $inner = $this->getInnerIterator();
+
+        // Pass all original patterns through (constructor will separate them again)
+        $allPatterns = array_merge($this->stringPatterns, $this->regexPatterns);
+
+        return new self($inner->getChildren(), $allPatterns, $this->negate);
     }
 }

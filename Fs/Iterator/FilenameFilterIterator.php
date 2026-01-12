@@ -27,16 +27,22 @@ use Iterator;
  * - `*.php` - All PHP files
  * - `Test*.php` - Files starting with Test
  * - `{foo,bar}.php` - foo.php or bar.php
+ *
+ * Can be used to include or exclude files based on the $negate parameter:
+ * - When $negate is false (default): includes files matching patterns
+ * - When $negate is true: excludes files matching patterns
  */
 final class FilenameFilterIterator extends FilterIterator
 {
     /**
      * @param \Iterator<mixed, \SplFileInfo> $iterator The iterator to filter
      * @param array<string> $patterns Glob patterns to match against
+     * @param bool $negate When true, inverts the filter (excludes matching files)
      */
     public function __construct(
         Iterator $iterator,
         protected readonly array $patterns,
+        protected readonly bool $negate = false,
     ) {
         parent::__construct($iterator);
     }
@@ -48,12 +54,14 @@ final class FilenameFilterIterator extends FilterIterator
     {
         $filename = $this->current()->getFilename();
 
+        $matches = false;
         foreach ($this->patterns as $pattern) {
             if (Path::matches($pattern, $filename)) {
-                return true;
+                $matches = true;
+                break;
             }
         }
 
-        return false;
+        return $this->negate ? !$matches : $matches;
     }
 }

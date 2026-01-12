@@ -27,9 +27,6 @@ use Cake\Utility\Fs\Iterator\FilenameFilterIterator;
 use Cake\Utility\Fs\Iterator\FileTypeFilterIterator;
 use Cake\Utility\Fs\Iterator\GlobFilterIterator;
 use Cake\Utility\Fs\Iterator\HiddenFileFilterIterator;
-use Cake\Utility\Fs\Iterator\MultiplePcreFilterIterator;
-use Cake\Utility\Fs\Iterator\NotContainsPathFilterIterator;
-use Cake\Utility\Fs\Iterator\NotFilenameFilterIterator;
 use Closure;
 use FilesystemIterator;
 use Iterator;
@@ -387,7 +384,12 @@ class Finder
 
         // Apply path pattern exclusions during recursion
         if ($this->notPathPatterns !== []) {
-            $directory = new NotContainsPathFilterIterator($directory, $this->notPathPatterns);
+            $directory = new ContainsPathFilterIterator($directory, $this->notPathPatterns, negate: true);
+        }
+
+        // Apply path pattern inclusions during recursion (non-regex patterns only)
+        if ($this->pathPatterns !== []) {
+            $directory = new ContainsPathFilterIterator($directory, $this->pathPatterns);
         }
 
         // Use SELF_FIRST when looking for directories to include them in iteration
@@ -408,23 +410,7 @@ class Finder
             $iterator = new FilenameFilterIterator($iterator, $this->names);
         }
         if ($this->notNames !== []) {
-            $iterator = new NotFilenameFilterIterator($iterator, $this->notNames);
-        }
-
-        // Apply path pattern inclusions
-        if ($this->pathPatterns !== []) {
-            // Check if patterns are regex (start with delimiter like /, #, ~)
-            $hasRegex = false;
-            foreach ($this->pathPatterns as $pattern) {
-                if (preg_match('/^[\/#~]/', $pattern)) {
-                    $hasRegex = true;
-                    break;
-                }
-            }
-
-            $iterator = $hasRegex
-                ? new MultiplePcreFilterIterator($iterator, $this->pathPatterns)
-                : new ContainsPathFilterIterator($iterator, $this->pathPatterns);
+            $iterator = new FilenameFilterIterator($iterator, $this->notNames, negate: true);
         }
 
         // Apply depth filtering (handles non-recursive mode when recursive=false)

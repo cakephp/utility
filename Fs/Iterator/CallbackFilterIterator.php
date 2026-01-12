@@ -23,9 +23,6 @@ use Iterator;
 
 /**
  * Filters files using a custom callback function.
- *
- * This is applied as a final stage filter after all built-in filters,
- * providing flexibility for edge cases not covered by dedicated iterators.
  */
 final class CallbackFilterIterator extends FilterIterator
 {
